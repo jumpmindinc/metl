@@ -34,9 +34,11 @@ import java.util.Date
                     from components.java
                 }
             }
-            signing {
-                useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
-	            sign publishing.publications.mavenJava
+            if (findProperty("signingKey")) {
+                signing {
+                    useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
+                    sign publishing.publications.mavenJava
+                }
             }
             repositories {
                 maven {
@@ -53,9 +55,11 @@ import java.util.Date
                     from components.java
                 }
             }
-            signing {
-                useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
-	            sign publishing.publications.mavenJava
+            if (findProperty("signingKey")) {
+                signing {
+                    useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
+                    sign publishing.publications.mavenJava
+                }
             }
             repositories {
                 maven {
@@ -73,9 +77,11 @@ import java.util.Date
                     from components.java
                 }
             }
-            signing {
-                useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
-	            sign publishing.publications.mavenJava
+            if (findProperty("signingKey")) {
+                signing {
+                    useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
+                    sign publishing.publications.mavenJava
+                }
             }
         }
     }
