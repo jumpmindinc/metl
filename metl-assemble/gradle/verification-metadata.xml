@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<verification-metadata xmlns="https://schema.gradle.org/dependency-verification" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd">
+   <configuration>
+      <verify-metadata>true</verify-metadata>
+      <verify-signatures>true</verify-signatures>
+      <keyring-format>armored</keyring-format>
+      <trusted-artifacts>
+         <trust group="^(?!com[.]jumpmind[.]saturn|org[.]bouncycastle).*$" regex="true" reason="Only the Saturn publish plugin and the Bouncy Castle jars it signs with are verified; they run in the release job with its token and signing key"/>
+         <trust group="^org[.]bouncycastle$" name="^.*-jdk15on$" regex="true" reason="The legacy jdk15on jars of metl-com's installer and license modules are outside the Saturn plugin's classpath, which uses the jdk18on jars only"/>
+      </trusted-artifacts>
+      <trusted-keys>
+         <trusted-key id="D2DB2C8E1ABCF80530C7F00E81B8A9B2AE50D498" group="^com[.]jumpmind[.]saturn($|([.].*))" regex="true"/>
+         <trusted-key id="7B121B76A7ED6CE6E60AD51784E913A8E3A748C0" group="org.bouncycastle"/>
+      </trusted-keys>
+   </configuration>
+   <components/>
+</verification-metadata>

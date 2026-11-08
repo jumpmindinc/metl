@@ -18,11 +18,18 @@ buildscript {
 plugins {
     id 'com.vaadin' version '25.3.2' apply false
     id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
-    id 'eu.kakde.gradle.sonatype-maven-central-publisher' version '1.0.6' apply false
+    id 'com.jumpmind.saturn.publish' version '0.3.3'
 }
 
-buildNumber = 'a'.equals(buildNumber) ?  ('a.' + new SimpleDateFormat("yyyyMMddHHmm").format(new Date())) : buildNumber
+def isReleaseBuild = !'a'.equals(buildNumber)
+buildNumber = isReleaseBuild ? buildNumber : ('a.' + new SimpleDateFormat("yyyyMMddHHmm").format(new Date()))
 version = version + "." + buildNumber
+
+gradle.taskGraph.whenReady { graph ->
+    if (!isReleaseBuild && graph.allTasks.any { it.name.endsWith('ToSaturn') }) {
+        throw new GradleException("Publishing to Saturn requires -PbuildNumber: released versions are immutable, so a timestamped development build must not take one")
+    }
+}
 
 ext {
     majorMinorVersion = version.substring(0, version.indexOf(".", version.indexOf(".")+ 1))

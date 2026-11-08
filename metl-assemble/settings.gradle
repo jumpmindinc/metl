@@ -1,3 +1,22 @@
+pluginManagement {
+    // One property points the plugin's resolution and its deploys at the same Saturn.
+    def saturnUrl = providers.gradleProperty('saturnUrl')
+            .orElse('https://downloads.jumpmind.com').get().replaceAll('/+$', '')
+    def saturnMavenUrl = "${saturnUrl}/files/maven/releases/"
+    repositories {
+        // Saturn serves only the Saturn plugins and the Portal never does: a Saturn plugin version
+        // missing on Saturn must fail the build instead of resolving from a public repository.
+        maven {
+            url = saturnMavenUrl
+            allowInsecureProtocol = saturnMavenUrl.startsWith('http://')
+            content { includeGroupByRegex 'com\\.jumpmind\\.saturn(\\..*)?' }
+        }
+        gradlePluginPortal {
+            content { excludeGroupByRegex 'com\\.jumpmind\\.saturn(\\..*)?' }
+        }
+    }
+}
+
 includeFlat 'metl-server', 'metl-core',  'metl-ui', 'resource-core',
 'comp-abstract', 'comp-rdbms-reader', 'comp-sorter', 
 'comp-data-diff', 'comp-temp-rdbms', 'comp-serialize',
