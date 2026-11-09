@@ -1,7 +1,8 @@
 pluginManagement {
     // One property points the plugin's resolution and its deploys at the same Saturn.
     def saturnUrl = providers.gradleProperty('saturnUrl')
-            .orElse('https://downloads.jumpmind.com').get().replaceAll('/+$', '')
+            //.orElse('https://downloads.jumpmind.com').get().replaceAll('/+$', '')
+            .orElse('https://saturn.dev.cp-nonprod.jumpmind.cloud').get().replaceAll('/+$', '')
     def saturnMavenUrl = "${saturnUrl}/files/maven/releases/"
     repositories {
         // Saturn serves only the Saturn plugins and the Portal never does: a Saturn plugin version
