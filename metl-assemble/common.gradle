@@ -96,11 +96,20 @@ ext {
         majorMinorVersion = version.substring(0, version.indexOf(".", version.indexOf(".")+ 1))
     }    
     
+    def saturnUrl = providers.gradleProperty('saturnUrl')
+            .orElse('https://saturn.dev.cp-nonprod.jumpmind.cloud').get().replaceAll('/+$', '')
     repositories {
         // uncomment this if you want to use your local maven repository to test undelivered
         /// changes (like symmetricds changes)
         //mavenLocal()
-        mavenCentral()        
+        // jlibs only, from the same Saturn as settings.gradle; first, so a SoapUI repository outage
+        // (it answered 502) can no longer fail the build
+        maven {
+            url = "${saturnUrl}/files/maven/releases/"
+            allowInsecureProtocol = saturnUrl.startsWith('http://')
+            content { includeGroup 'jlibs' }
+        }
+        mavenCentral()
         maven { url "https://maven.vaadin.com/vaadin-addons" }
         maven { url "https://plugins.gradle.org/m2" }
         maven { url "https://www.soapui.org/repository/maven2" }
