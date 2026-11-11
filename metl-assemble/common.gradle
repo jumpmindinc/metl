@@ -3,13 +3,17 @@ import org.apache.tools.ant.filters.ReplaceTokens
 import java.text.SimpleDateFormat
 import java.util.Date
 
+ext {
+    GPL_LICENSE = 'GNU GPL version 3.0'
+    COMMERCIAL_LICENSE = 'Commercial'
+}
+
     group = 'org.jumpmind.metl'
     apply plugin: 'idea'    
     apply plugin: 'eclipse-wtp'
     apply plugin: 'java'
     apply plugin: 'java-library'
 	apply plugin: 'jacoco'
-	apply plugin: 'signing'
 	
 	if (!project.name.equals("metl-com") && !project.name.equals("metl-core") && !project.name.equals("metl-server") && !project.name.equals("metl-ui")) {
 		ext {
@@ -20,99 +24,71 @@ import java.util.Date
 		buildNumber = 'a'.equals(buildNumber) ?  ('a.' + new SimpleDateFormat("yyyyMMddHHmm").format(new Date())) : buildNumber
 		version = version + "." + buildNumber
 	}
-	def licenseName = null;
+	def licenseName = null
 	
     sourceCompatibility=JavaVersion.VERSION_21
     targetCompatibility=JavaVersion.VERSION_21
     
-    if (project.name.startsWith('comp-') && projectDir.getPath().contains('metl-com')) {
-        apply plugin: 'eu.kakde.gradle.sonatype-maven-central-publisher'
-        licenseName = "Commercial";
-        publishing {
-            publications {
-                mavenJava(MavenPublication) {
-                    from components.java
-                }
-            }
-            if (findProperty("signingKey")) {
-                signing {
-                    useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
-                    sign publishing.publications.mavenJava
-                }
-            }
-            repositories {
-                maven {
-                    url "../../metl/metl-war/build/plugins"
-                }
-            }
-        }
+    def pluginRepositoryDir = null
+    // From metl-com every path runs through metl-com-assemble/../../metl, so classify by where the
+    // component really lives: a component outside the metl repository (metl-com/comp-*) is commercial.
+    def metlRepositoryDir = buildscript.sourceFile.canonicalFile.parentFile.parentFile
+    def isCommercialComponent = projectDir.canonicalFile.parentFile != metlRepositoryDir
+    if (project.name.startsWith('comp-') && isCommercialComponent) {
+        licenseName = COMMERCIAL_LICENSE
+        pluginRepositoryDir = "../../metl/metl-war/build/plugins"
     } else if (project.name.startsWith('comp') || project.name.startsWith('resource')) {
-        apply plugin: 'eu.kakde.gradle.sonatype-maven-central-publisher'
-        licenseName = "GNU GPL version 3.0";
-        publishing {
-            publications {
-                mavenJava(MavenPublication) {
-                    from components.java
-                }
-            }
-            if (findProperty("signingKey")) {
-                signing {
-                    useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
-                    sign publishing.publications.mavenJava
-                }
-            }
-            repositories {
-                maven {
-                    url "../metl-war/build/plugins"
-                }
-            }
-        }
+        licenseName = GPL_LICENSE
+        pluginRepositoryDir = "../metl-war/build/plugins"
     } else if (project.name.equals("metl-core") || project.name.equals("metl-server") || project.name.equals("metl-ui")
         || project.name.equals("metl-com")) {
-        apply plugin: 'eu.kakde.gradle.sonatype-maven-central-publisher'
-        licenseName = project.name.equals("metl-com") ? "Commercial" : "GNU GPL version 3.0"
+        licenseName = project.name.equals("metl-com") ? COMMERCIAL_LICENSE : GPL_LICENSE
+    }
+
+    if (licenseName != null) {
+        apply plugin: 'maven-publish'
         publishing {
-        	publications {
+            publications {
                 mavenJava(MavenPublication) {
                     from components.java
+                    pom {
+                        name = project.name
+                        description = 'ETL Data Integration'
+                        url = 'https://github.com/jumpmindinc/metl'
+                        licenses {
+                            license {
+                                name = licenseName
+                                if (licenseName == GPL_LICENSE) {
+                                    url = 'https://www.gnu.org/licenses/gpl-3.0.txt'
+                                }
+                            }
+                        }
+                        developers {
+                            developer {
+                                name = 'Jumpmind'
+                                organization = 'Jumpmind'
+                                organizationUrl = 'https://www.jumpmind.com'
+                            }
+                        }
+                        scm {
+                            url = 'https://github.com/jumpmindinc/metl'
+                            connection = 'scm:git:https://github.com/jumpmindinc/metl.git'
+                            developerConnection = 'scm:git:ssh://git@github.com/jumpmindinc/metl.git'
+                        }
+                    }
                 }
             }
-            if (findProperty("signingKey")) {
-                signing {
-                    useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
-                    sign publishing.publications.mavenJava
+            if (pluginRepositoryDir != null) {
+                repositories {
+                    maven {
+                        url = pluginRepositoryDir
+                    }
                 }
             }
         }
-    }
-    
-    if (licenseName != null) {
-        sonatypeCentralPublishExtension {
-            groupId.set("${project.group}")
-            artifactId.set("${project.name}")
-            version.set("${project.version}")
-            componentType.set("java")
-            publishingType.set("AUTOMATIC")
-            username.set(getProperty("sonatypeUser"))
-            password.set(getProperty("sonatypePassword"))
-            pom {
-                name.set("${project.name}")
-                description.set("ETL Data Integration")
-                url.set("https://github.com/jumpmindinc/metl")
-                licenses {
-                    license {
-                        name.set(licenseName)
-                    }
-                }
-                developers {
-                    developer {
-                        name.set("Jumpmind")
-                    }
-                }
-                scm {
-                    url.set("https://github.com/jumpmindinc/metl")
-                }
-            }
+        // Commercial modules stay out of the public repository.
+        if (licenseName == GPL_LICENSE && rootProject.pluginManager.hasPlugin('com.jumpmind.saturn.publish')) {
+            apply plugin: 'com.jumpmind.saturn.publish'
         }
     }
 
@@ -120,11 +96,20 @@ import java.util.Date
         majorMinorVersion = version.substring(0, version.indexOf(".", version.indexOf(".")+ 1))
     }    
     
+    def saturnUrl = providers.gradleProperty('saturnUrl')
+            .orElse('https://saturn.dev.cp-nonprod.jumpmind.cloud').get().replaceAll('/+$', '')
     repositories {
         // uncomment this if you want to use your local maven repository to test undelivered
         /// changes (like symmetricds changes)
         //mavenLocal()
-        mavenCentral()        
+        // jlibs only, from the same Saturn as settings.gradle; first, so a SoapUI repository outage
+        // (it answered 502) can no longer fail the build
+        maven {
+            url = "${saturnUrl}/files/maven/releases/"
+            allowInsecureProtocol = saturnUrl.startsWith('http://')
+            content { includeGroup 'jlibs' }
+        }
+        mavenCentral()
         maven { url "https://maven.vaadin.com/vaadin-addons" }
         maven { url "https://plugins.gradle.org/m2" }
         maven { url "https://www.soapui.org/repository/maven2" }
@@ -153,24 +138,25 @@ import java.util.Date
         deployerJars "org.apache.maven.wagon:wagon-ssh:3.5.3"
     }
 
-    task sourcesJar(type: Jar, dependsOn:classes) {
-        archiveClassifier = 'sources'
-        from sourceSets.main.allSource
+    java {
+        withSourcesJar()
+        withJavadocJar()
     }
-    
+
     task testJar(type: Jar) {
         archiveClassifier = "test"
         from sourceSets.test.output
     }    
     
-    artifacts { archives sourcesJar 
-                testArtifacts testJar  }
+    artifacts { testArtifacts testJar }
     
     if (JavaVersion.current().isJava8Compatible()) {
       allprojects {
         tasks.withType(Javadoc) {
           options.addStringOption('Xdoclint:none', '-quiet')
           options.addStringOption("sourcepath", "")
+          // Javadoc writes its run date into every page; without it two builds differ.
+          options.addBooleanOption('notimestamp', true)
         }
       }
     }       
@@ -181,14 +167,19 @@ import java.util.Date
                        "Implementation-Version": version,
                        "Project-Artifact": project.name,                       
                        "Build-Version": version,
-                       "Build-Time": new SimpleDateFormat("yyyyMMdd-HHmm").format(new Date()),
                        "Build-Scm-Version": gitVersion,
                        "Build-Scm-Branch": gitBranch)
         }    
     }    
     
+    tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+
     test {
-        ignoreFailures true
+        // A release passes -PfailOnTestFailure=true so a failing test stops it.
+        ignoreFailures = !providers.gradleProperty('failOnTestFailure').map { it.toBoolean() }.getOrElse(false)
     }
     
     dependencies {

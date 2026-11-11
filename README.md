@@ -51,3 +51,24 @@ cd metl-assemble
 ~~~~~
 
 To run in Eclipse, use the "Show Your Metl" launch shortcut.
+
+### Publish a release
+
+The GPL modules (`metl-core`, `metl-server`, `metl-ui`, `resource-core` and every `comp-*` in this repository) are
+published as `org.jumpmind.metl:*` to the Jumpmind Maven repository at `https://downloads.jumpmind.com/files/maven/releases/`,
+and the installer to the `metl/releases` category. The **Release** workflow of `jumpmindinc/metl-com` publishes them; it
+builds this repository from the branch with the same name as the metl-com branch.
+
+1. Ask a Jumpmind admin to open a deployment window on Admin › Releases › Deployment windows for the release
+   API token. Outside the window every deploy is refused with HTTP 403 "Maven deploys are closed", and 10
+   refusals within an hour revoke the token, so start the release only once the window is open.
+2. Run the metl-com **Release** workflow on the `release/*` branch with the version, the build number and the
+   target Saturn. It fails on a failing test, signs every GPL module, stages and releases them on Saturn (all
+   modules or none), uploads the installer, attests the released jars, and only then tags the commit.
+3. Check a jar's provenance:
+   ~~~~~
+   gh attestation verify comp-file-<version>.<buildNumber>.jar -R jumpmindinc/metl-com
+   ~~~~~
+
+Released versions are immutable: `metl-core`, `metl-server` and `metl-ui` publish as plain `<version>`, so
+each version of them can be released once. A build without `-PbuildNumber` refuses to publish.
